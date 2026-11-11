@@ -91,6 +91,8 @@ Les valeurs sont lues dans `src/config.js`, puis utilisées par `src/screens/Log
 
 Les champs sont préremplis ; le bouton « Entrer dans la boutique démo » ouvre l'application directement. L'authentification est simulée localement : aucun mot de passe n'est vérifié ni transmis.
 
+Application en ligne : https://stock-mstudio-kone.vercel.app
+
 ## API
 
 L'application n'appelle aucune API distante : la persistance est locale. Le contrat réellement utilisé est décrit d'abord ; les routes HTTP prévues pour une version connectée suivent, clairement marquées comme non implémentées.
@@ -277,7 +279,7 @@ Le projet se déploie sans configuration supplémentaire chez Vercel ou Netlify 
 
 Le service worker est généré au build (`dist/sw.js`) avec un identifiant de build : chaque nouveau déploiement invalide l'ancien cache et prend la main sans intervention.
 
-URL publique : _à renseigner après la mise en ligne._
+URL publique : **https://stock-mstudio-kone.vercel.app**
 
 ## Structure
 
