@@ -2,7 +2,7 @@
 
 Application mobile de gestion de stock pour la boutique de tissus de Madame Koné (Abidjan) : photos des tissus, quantités, alertes de stock bas, classement par rentabilité et fonctionnement hors-ligne.
 
-> Données de démonstration stockées dans le navigateur (`localStorage`). Aucun serveur, aucune clé API et aucune variable d'environnement ne sont requis. Après la première visite, l'application s'ouvre et fonctionne hors-ligne.
+> Données de démonstration stockées dans le navigateur (`localStorage`). Aucun serveur ni clé API ; les variables d'environnement sont facultatives (voir `.env.example`). Après la première visite, l'application s'ouvre et fonctionne hors-ligne.
 
 ## Direction artistique
 
@@ -60,7 +60,27 @@ npm run preview
 
 ## Variables d'environnement
 
-Aucune variable n'est requise pour cette version. Aucun fichier `.env` n'est nécessaire.
+Aucune variable n'est obligatoire : l'application démarre avec les valeurs par défaut. `.env.example` sert de référence et peut être copié en `.env.local` pour adapter la démo.
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Requise | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `VITE_DEMO_EMAIL` | non | `demo@kone.ci` | E-mail prérempli et affiché sur l'écran de connexion |
+| `VITE_DEMO_PASSWORD` | non | `demo1234` | Mot de passe prérempli et affiché sur l'écran de connexion |
+| `VITE_SYNC_DELAY_MS` | non | `900` | Délai avant vidage de la file hors-ligne, en millisecondes |
+
+Exemple de `.env.local` :
+
+```dotenv
+VITE_DEMO_EMAIL=boutique@kone.ci
+VITE_DEMO_PASSWORD=wax2026
+VITE_SYNC_DELAY_MS=1200
+```
+
+Les valeurs sont lues dans `src/config.js`, puis utilisées par `src/screens/Login.jsx` (identifiants de démonstration) et `src/App.jsx` (délai de synchronisation). Vite n'expose que les variables préfixées `VITE_` ; aucune valeur secrète ne doit y être placée.
 
 ## Compte de démonstration
 
@@ -73,7 +93,74 @@ Les champs sont préremplis ; le bouton « Entrer dans la boutique démo » ouvr
 
 ## API
 
-Cette version n'expose pas de backend : les données sont lues et écrites dans `localStorage` (clé `kone-stock-v1`). Le contrat ci-dessous décrit les routes prévues pour la version connectée ; elles ne sont **pas** implémentées ici.
+L'application n'appelle aucune API distante : la persistance est locale. Le contrat réellement utilisé est décrit d'abord ; les routes HTTP prévues pour une version connectée suivent, clairement marquées comme non implémentées.
+
+### Contrat local (implémenté)
+
+Les données vivent dans `localStorage`, clé `kone-stock-v1`, lues et écrites par `src/lib.js` (`loadState`, `saveState`).
+
+**Lire l'état** — équivalent d'un `GET /api/state`
+
+```js
+import { loadState } from './lib'
+
+const state = loadState()
+```
+
+Réponse :
+
+```json
+{
+  "fabrics": [
+    {
+      "id": "wx-214",
+      "name": "Wax fleuri Amsterdam",
+      "ref": "WX-214",
+      "category": "Wax",
+      "unit": "pagne",
+      "qty": 3,
+      "threshold": 5,
+      "price": 6000,
+      "cost": 3500,
+      "location": "Étagère B-3",
+      "photo": null
+    }
+  ],
+  "pending": [],
+  "syncedAt": 1762869600000
+}
+```
+
+**Mettre à jour une quantité** — `saveQuantity(id, delta)` dans `src/App.jsx`
+
+```js
+// requête
+{ "fabricId": "wx-214", "delta": -1 }
+```
+
+```json
+// réponse : le tissu mis à jour
+{ "id": "wx-214", "qty": 2 }
+```
+
+Hors-ligne, l'opération est mise en file et rejouée au retour du réseau :
+
+```json
+// élément ajouté à "pending" (type "qty"), ou "create" avec le tissu complet
+{
+  "id": "op-1762869612450",
+  "type": "qty",
+  "fabricId": "wx-214",
+  "qty": 2,
+  "at": 1762869612450
+}
+```
+
+**Ajouter un tissu** — `addFabric(fabric)` préfixe la liste et écrit l'état complet.
+
+### Routes HTTP prévues (non implémentées)
+
+Cette version n'expose pas de backend. Le tableau décrit les routes qu'une version connectée devrait fournir ; les exemples montrent le format attendu.
 
 | Méthode | Route | Rôle |
 | --- | --- | --- |
@@ -82,6 +169,46 @@ Cette version n'expose pas de backend : les données sont lues et écrites dans 
 | `PATCH` | `/api/fabrics/:id` | Mise à jour (quantité, seuil, prix, coût) |
 | `DELETE` | `/api/fabrics/:id` | Retrait d'un tissu |
 | `POST` | `/api/sync` | Envoi groupé des modifications faites hors-ligne |
+
+```http
+GET /api/fabrics?category=Wax&low=1 HTTP/1.1
+Accept: application/json
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[{ "id": "wx-214", "name": "Wax fleuri Amsterdam", "qty": 3, "threshold": 5 }]
+```
+
+```http
+PATCH /api/fabrics/wx-214 HTTP/1.1
+Content-Type: application/json
+
+{ "qty": 2 }
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "id": "wx-214", "name": "Wax fleuri Amsterdam", "qty": 2, "threshold": 5 }
+```
+
+```http
+POST /api/sync HTTP/1.1
+Content-Type: application/json
+
+{ "operations": [{ "type": "qty", "fabricId": "wx-214", "qty": 2 }] }
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ "accepted": 1, "rejected": 0, "syncedAt": 1762869613000 }
+```
 
 Format d'un tissu :
 
@@ -145,7 +272,7 @@ Le projet se déploie sans configuration supplémentaire chez Vercel ou Netlify 
 | Commande de build | `npm run build` |
 | Dossier de sortie | `dist` |
 | Version de Node | 18 ou plus récente |
-| Variables d'environnement | aucune |
+| Variables d'environnement | aucune obligatoire — voir `.env.example` |
 | HTTPS | requis pour le service worker (les deux plateformes le fournissent) |
 
 Le service worker est généré au build (`dist/sw.js`) avec un identifiant de build : chaque nouveau déploiement invalide l'ancien cache et prend la main sans intervention.
@@ -158,6 +285,7 @@ URL publique : _à renseigner après la mise en ligne._
 kone-stock/
 ├── index.html
 ├── package.json
+├── .env.example        variables facultatives (identifiants démo, délai de synchro)
 ├── vite.config.js      build + génération du service worker
 ├── public/
 │   ├── manifest.webmanifest
@@ -167,6 +295,7 @@ kone-stock/
 └── src/
     ├── main.jsx          point d'entrée + enregistrement du service worker
     ├── App.jsx           routes, état, file hors-ligne, persistance
+    ├── config.js         lecture des variables d'environnement VITE_*
     ├── data.js           catalogue de démonstration
     ├── lib.js            formats FCFA, statuts, marges, visuels SVG, stockage
     ├── ui.jsx            composants de base et icônes

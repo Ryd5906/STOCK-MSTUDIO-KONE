@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Field } from '../ui'
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../config'
 
 export default function Login({ onEnter }) {
-  const [email, setEmail] = useState('demo@kone.ci')
-  const [password, setPassword] = useState('demo1234')
+  const [email, setEmail] = useState(DEMO_EMAIL)
+  const [password, setPassword] = useState(DEMO_PASSWORD)
 
   function submit(event) {
     event.preventDefault()
@@ -59,7 +60,9 @@ export default function Login({ onEnter }) {
 
       <div className="demo">
         <span className="demo__label">Accès démonstration</span>
-        <span className="demo__creds">demo@kone.ci · demo1234</span>
+        <span className="demo__creds">
+          {DEMO_EMAIL} · {DEMO_PASSWORD}
+        </span>
         <button type="button" className="link-btn" onClick={onEnter}>
           Entrer dans la boutique démo
         </button>

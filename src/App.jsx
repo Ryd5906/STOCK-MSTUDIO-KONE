@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadState, newId, saveState } from './lib'
+import { SYNC_DELAY_MS } from './config'
 import { BottomNav, SyncSheet, Toast } from './shell'
 import { IconPlus } from './ui'
 import Login from './screens/Login'
@@ -69,7 +70,7 @@ export default function App() {
     const timer = setTimeout(() => {
       setSyncing(false)
       setSyncedAt(Date.now())
-    }, 900)
+    }, SYNC_DELAY_MS)
     return () => clearTimeout(timer)
   }, [syncing])
 
@@ -82,7 +83,7 @@ export default function App() {
       notify(
         `${count} modification${count > 1 ? 's' : ''} synchronisée${count > 1 ? 's' : ''}`,
       )
-    }, 900)
+    }, SYNC_DELAY_MS)
     return () => clearTimeout(timer)
   }, [online, pending.length, syncing])
 
